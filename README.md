@@ -1,9 +1,15 @@
 # structflag
 
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/ucarion/structflag)](https://pkg.go.dev/github.com/ucarion/structflag)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/ucarion/structflag/tests?label=tests&logo=github&style=flat-square)](https://github.com/ucarion/structflag/actions)
+
 `structflag` is a Golang package that lets you conveniently use the standard
-library's `flag` package with structs. Just create a struct for your config, put
-a `flag:"..."` tag on the fields you want to populate from flags, and then call
-`structflag.Load` with a pointer to your struct.
+library's `flag` package with structs. In other words, `structflag` CLI-ifies
+your config structs with a single line of code.
+
+Just create a struct for your config, optionally put a `` `flag:"..."` `` and/or
+`` `usage:"..."` `` tag on the fields you want to populate from flags, and then
+call `structflag.Load` with a pointer to your struct.
 
 The main benefits of this package are:
 
@@ -11,54 +17,88 @@ The main benefits of this package are:
    top of "sub-configs", and you can use these config structs in tests too.
 2. A terser syntax for invoking the standard library's `flag` package.
 
-## Example
+## Installation
 
-Here's a simple program that uses `structflag` to avoid having to do a bunch of
-`flag.String`, `flag.Int`, `flag.Duration` calls:
+To use `structflag` in your program, run:
+
+```bash
+go get github.com/ucarion/structflag
+```
+
+## Basic Usage
+
+In its simplest form, you can usually just invoke `structflag.Load` with an
+existing config to CLI-ify it.
 
 ```go
-package main
-
-import (
-  "flag"
-  "fmt"
-  "time"
-
-  "github.com/ucarion/structflag"
-)
-
-type name struct {
-  FirstName string `flag:"first" usage:"first name"`
-  LastName  string `flag:"last" usage:"last name"`
+type config struct {
+	FirstName string
+	LastName  string
 }
 
 func main() {
-  config := struct {
-    Name  name          `flag:"name"`
-    Count int           `flag:"count" usage:"how many times to say hello"`
-    Wait  time.Duration `flag:"wait" usage:"how long to wait before greeting"`
-  }{
-    Count: 3,
-    Wait:  1 * time.Second,
-  }
+	var conf config
+	structflag.Load(&conf)
+	flag.Parse()
 
-  structflag.Load(&config)
-  flag.Parse()
-
-  time.Sleep(config.Wait)
-  for i := 0; i < config.Count; i++ {
-    fmt.Println("hello", config.Name)
-  }
+	fmt.Println(conf)
 }
 ```
 
-Assuming you put this in a file called `./examples/simple/main.go` ([like the
-one you can find in this repo](./examples/simple/main.go)), you can invoke it as
-so:
+This is already in [`./examples/minimal/main.go`](./examples/minimal/main.go) in
+this repo, so you can run it as:
 
 ```text
-$ go run ./examples/simple/... --help
-Usage of simple:
+$ go run ./examples/minimal/... --help
+Usage of /[snip]/minimal:
+  -FirstName string
+
+  -LastName string
+
+exit status 2
+
+$ go run ./examples/minimal/... -FirstName john -LastName doe
+{john doe}
+```
+
+## Advanced Usage
+
+For the common case of a relatively simple struct that you want to customize
+flag and usage details for, and where you already have some default values, you
+can do something like this:
+
+```go
+type name struct {
+	FirstName string `flag:"first" usage:"first name"`
+	LastName  string `flag:"last" usage:"last name"`
+}
+
+func main() {
+	config := struct {
+		Name  name          `flag:"name"`
+		Count int           `flag:"count" usage:"how many times to say hello"`
+		Wait  time.Duration `flag:"wait" usage:"how long to wait before greeting"`
+	}{
+		Count: 3,
+		Wait:  1 * time.Second,
+	}
+
+	structflag.Load(&config)
+	flag.Parse()
+
+	time.Sleep(config.Wait)
+	for i := 0; i < config.Count; i++ {
+		fmt.Println("hello", config.Name)
+	}
+}
+```
+
+This is already in [`./examples/detailed/main.go`](./examples/detailed/main.go)
+in this repo, so you can run it as:
+
+```text
+$ go run ./examples/detailed/... --help
+Usage of /[snip]/detailed:
   -count int
     	how many times to say hello (default 3)
   -name-first string
@@ -67,18 +107,11 @@ Usage of simple:
     	last name
   -wait duration
     	how long to wait before greeting (default 1s)
-exit status 2
 
-$ go run ./examples/simple/... --name-first=john --name-last=doe
-hello {john doe}
-hello {john doe}
-hello {john doe}
-```
-
-By default, `Load` writes to `flag.CommandLine`, the "default" `flag.FlagSet`.
-If you prefer to use a different `flag.FlagSet`, use `LoadTo` instead:
-
-```go
-flagSet := flag.NewFlagSet("my-cool-flagset", flag.PanicOnError)
-structflag.LoadTo(&flagSet, ...)
+$ go run ./examples/detailed/... --count 5 --name-first muhammad --name-last al-khwarizmi
+hello {muhammad al-khwarizmi}
+hello {muhammad al-khwarizmi}
+hello {muhammad al-khwarizmi}
+hello {muhammad al-khwarizmi}
+hello {muhammad al-khwarizmi}
 ```
