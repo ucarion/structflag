@@ -1,6 +1,7 @@
 # structflag
 
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/ucarion/structflag)](https://pkg.go.dev/github.com/ucarion/structflag)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/ucarion/structflag/tests?label=tests&logo=github&style=flat-square)](https://github.com/ucarion/structflag/actions)
 
 `structflag` is a Golang package that lets you conveniently use the standard
 library's `flag` package with structs. In other words, `structflag` CLI-ifies
